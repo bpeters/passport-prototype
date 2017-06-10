@@ -20,13 +20,17 @@ contract Passport {
   // event to deactivate SIM
   event DeactivateSIM(string sim);
 
+  // event to notify deposit has been made
+  event DepositMade(string sim);
+
   // constructor
   function Passport() {
     owner = msg.sender;
   }
 
-  // function to register sim and set initial balance
+  // register sim and set initial balance
   // initial balance must be above minimum balance amount
+  // activiate sim afterwards
   function register(string sim) {
     if (msg.value < minimumBalance) throw;
 
@@ -34,6 +38,26 @@ contract Passport {
     balances[msg.sender] = msg.value;
 
     ActivateSIM(sim);
+  }
+
+  // add eth to balance
+  // balance must be above minimum balance
+  // if deposit bumps the balance above minimum balance, activate sim
+  function deposit() public returns (uint) {
+    uint initialBalance = balances[msg.sender];
+    uint newBalance = initialBalance + msg.value;
+
+    if (newBalance < minimumBalance) throw;
+
+    balances[msg.sender] = newBalance;
+
+    DepositMade(sims[msg.sender]);
+
+    if (initialBalance < minimumBalance) {
+      ActivateSIM(sim);
+    }
+
+    return newBalance;
   }
 
   // Fallback function - Called if other functions don't match call or
