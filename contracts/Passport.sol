@@ -14,13 +14,13 @@ contract Passport {
   // sims of the addresses
   mapping (address => string) private sims;
 
-  // event to activate SIM
+  // Event to activate SIM
   event ActivateSIM(string sim);
 
-  // event to deactivate SIM
+  // Event to deactivate SIM
   event DeactivateSIM(string sim);
 
-  // event to notify deposit has been made
+  // Event to notify deposit has been made
   event DepositMade(string sim);
 
   // constructor
@@ -28,9 +28,9 @@ contract Passport {
     owner = msg.sender;
   }
 
-  // register sim and set initial balance
-  // initial balance must be above minimum balance amount
-  // activiate sim afterwards
+  // Register sim and set initial balance
+  // Initial balance must be above minimum balance amount
+  // Activiate sim afterwards
   function register(string sim) {
     if (msg.value < minimumBalance) throw;
 
@@ -40,9 +40,19 @@ contract Passport {
     ActivateSIM(sim);
   }
 
-  // add eth to balance
-  // balance must be above minimum balance
-  // if deposit bumps the balance above minimum balance, activate sim
+  // Get eth balance
+  function getBalance() public returns (uint) {
+    return balances[msg.sender];
+  }
+
+  // Get registered sim
+  function getSim() public returns (string) {
+    return sims[msg.sender];
+  }
+
+  // Deposit ether to balance
+  // Balance must be above minimum balance
+  // If deposit bumps the balance above minimum balance, activate sim
   function deposit() public returns (uint) {
     uint initialBalance = balances[msg.sender];
     uint newBalance = initialBalance + msg.value;
@@ -58,6 +68,24 @@ contract Passport {
     }
 
     return newBalance;
+  }
+
+  // Withdraw ether from balance
+  // If new balance is less than minimum balance, deactivate sim
+  function withdraw(uint withdrawAmount) public returns (uint balance) {
+    if (balances[msg.sender] >= withdrawAmount) {
+      balances[msg.sender] -= withdrawAmount;
+
+      if (!msg.sender.send(withdrawAmount)) {
+        balances[msg.sender] += withdrawAmount;
+      }
+    }
+
+    if (balances[msg.sender] < minimumBalance) {
+      DeactivateSIM(sims[msg.sender]);
+    }
+
+    return balances[msg.sender];
   }
 
   // Fallback function - Called if other functions don't match call or
