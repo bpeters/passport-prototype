@@ -109,6 +109,8 @@ contract Passport {
     if (balances[user] < minimumBalance) {
       DeactivateSIM(sim);
     }
+
+    return balances[user];
   }
 
   function () {
