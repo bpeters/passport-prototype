@@ -2,57 +2,49 @@ pragma solidity ^0.4.4;
 
 contract Passport {
 
-  // constant minimum balance in wei
-  int constant minimumBalance = 1000000000000000000;
+  uint constant minimumBalance = 40 finney; // Minimum balance .04 ETH ~$12
+  uint constant dataCost = 40000000; // Cost per data byte in wei
 
-  // contract owner
   address public owner;
 
-  // balances of the addresses in wei
   mapping (address => uint) private balances;
-
-  // sims of the addresses
   mapping (address => string) private sims;
+  mapping (address => int) private usages;
+  mapping (string => address) private addresses;
 
-  // Event to activate SIM
   event ActivateSIM(string sim);
-
-  // Event to deactivate SIM
   event DeactivateSIM(string sim);
+  event DepositMade(string sim, uint amount);
+  event WithdrawMade(string sim, uint amount);
+  event PayableMade(string sim, uint amount);
 
-  // Event to notify deposit has been made
-  event DepositMade(string sim);
-
-  // constructor
   function Passport() {
     owner = msg.sender;
   }
 
-  // Register sim and set initial balance
-  // Initial balance must be above minimum balance amount
-  // Activiate sim afterwards
   function register(string sim) {
     if (msg.value < minimumBalance) throw;
 
     sims[msg.sender] = sim;
+    addresses[sim] = msg.sender;
     balances[msg.sender] = msg.value;
+    usages[msg.sender] = 0;
 
     ActivateSIM(sim);
   }
 
-  // Get eth balance
-  function getBalance() public returns (uint) {
+  function balance() constant returns (uint) {
     return balances[msg.sender];
   }
 
-  // Get registered sim
-  function getSim() public returns (string) {
+  function sim() constant returns (string) {
     return sims[msg.sender];
   }
 
-  // Deposit ether to balance
-  // Balance must be above minimum balance
-  // If deposit bumps the balance above minimum balance, activate sim
+  function usage() constant returns (int) {
+    return usages[msg.sender];
+  }
+
   function deposit() public returns (uint) {
     uint initialBalance = balances[msg.sender];
     uint newBalance = initialBalance + msg.value;
@@ -61,7 +53,7 @@ contract Passport {
 
     balances[msg.sender] = newBalance;
 
-    DepositMade(sims[msg.sender]);
+    DepositMade(sims[msg.sender], msg.value);
 
     if (initialBalance < minimumBalance) {
       ActivateSIM(sim);
@@ -70,14 +62,14 @@ contract Passport {
     return newBalance;
   }
 
-  // Withdraw ether from balance
-  // If new balance is less than minimum balance, deactivate sim
-  function withdraw(uint withdrawAmount) public returns (uint balance) {
+  function withdraw(uint withdrawAmount) public returns (uint) {
     if (balances[msg.sender] >= withdrawAmount) {
       balances[msg.sender] -= withdrawAmount;
 
       if (!msg.sender.send(withdrawAmount)) {
         balances[msg.sender] += withdrawAmount;
+      } else {
+        WithdrawMade(sims[msg.sender], withdrawAmount);
       }
     }
 
@@ -88,12 +80,38 @@ contract Passport {
     return balances[msg.sender];
   }
 
-  // Fallback function - Called if other functions don't match call or
-  // sent ether without data
-  // Typically, called when invalid data is sent
-  // Added so ether sent to this contract is reverted if the contract fails
-  // otherwise, the sender's money is transferred to contract
+  function payable(int dataConsumed, string sim) returns (uint) {
+    if (msg.sender != owner) throw;
+
+    address user = addresses[sim];
+    int usage = usages[user];
+    uint payableAmount = (dataConsumed - usage) * dataCost;
+
+    // if balance can't cover payable
+    // empty balance to cover what is can
+    // update usage to reflect what's been paid for
+    // sim will be deactivated
+    if (balances[user] < payableAmount) {
+      payableAmount = balances[user];
+      dataConsumed = usage + (payableAmount / dataCost);
+    }
+
+    balances[user] -= payableAmount;
+    usages[user] = dataConsumed;
+
+    if (!msg.sender.send(payableAmount)) {
+      balances[user] += payableAmount;
+      usages[user] = usage;
+    } else {
+      PayableMade(sim, payableAmount);
+    }
+
+    if (balances[user] < minimumBalance) {
+      DeactivateSIM(sim);
+    }
+  }
+
   function () {
-    throw; // throw reverts state to before call
+    throw;
   }
 }
