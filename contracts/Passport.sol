@@ -3,14 +3,14 @@ pragma solidity ^0.4.4;
 contract Passport {
 
   uint constant minimumBalance = 40 finney; // Minimum balance .04 ETH ~$12
-  uint constant dataCost = 40000000; // Cost per data byte in wei
+  uint constant dataCost = 40000000;  // Cost per data byte in wei
 
   address public owner;
 
   mapping (address => uint) private balances;
   mapping (address => string) private sims;
   mapping (address => int) private usages;
-  mapping (string => address) private addresses;
+  mapping (string => address) private addresses; // SIM => address
 
   event ActivateSIM(string sim);
   event DeactivateSIM(string sim);
@@ -49,15 +49,13 @@ contract Passport {
     uint initialBalance = balances[msg.sender];
     uint newBalance = initialBalance + msg.value;
 
-    if (newBalance < minimumBalance) throw;
+    if (newBalance < minimumBalance) throw; // Deposit more than minimum
 
     balances[msg.sender] = newBalance;
 
     DepositMade(sims[msg.sender], msg.value);
 
-    if (initialBalance < minimumBalance) {
-      ActivateSIM(sim);
-    }
+    if (initialBalance < minimumBalance) ActivateSIM(sims[msg.sender]);
 
     return newBalance;
   }
@@ -73,27 +71,21 @@ contract Passport {
       }
     }
 
-    if (balances[msg.sender] < minimumBalance) {
-      DeactivateSIM(sims[msg.sender]);
-    }
+    if (balances[msg.sender] < minimumBalance) DeactivateSIM(sims[msg.sender]);
 
     return balances[msg.sender];
   }
 
-  function payable(int dataConsumed, string sim) returns (uint) {
+  function collect(int dataConsumed, string sim) public returns (uint) {
     if (msg.sender != owner) throw;
 
     address user = addresses[sim];
     int usage = usages[user];
-    uint payableAmount = (dataConsumed - usage) * dataCost;
+    uint payableAmount = uint(dataConsumed - usage) * dataCost;
 
-    // if balance can't cover payable
-    // empty balance to cover what is can
-    // update usage to reflect what's been paid for
-    // sim will be deactivated
-    if (balances[user] < payableAmount) {
-      payableAmount = balances[user];
-      dataConsumed = usage + (payableAmount / dataCost);
+    if (balances[user] < payableAmount) {                   // if balance can't cover payable
+      payableAmount = balances[user];                       // empty balance to cover what it can
+      dataConsumed = usage + int(payableAmount / dataCost); // update usage to reflect what's been paid for
     }
 
     balances[user] -= payableAmount;
@@ -106,11 +98,9 @@ contract Passport {
       PayableMade(sim, payableAmount);
     }
 
-    if (balances[user] < minimumBalance) {
-      DeactivateSIM(sim);
-    }
+    if (balances[user] < minimumBalance) DeactivateSIM(sim);
 
-    return balances[user];
+    return 0;
   }
 
   function () {
