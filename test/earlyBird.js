@@ -1,10 +1,11 @@
-var Passport = artifacts.require("./Passport.sol");
+var EarlyBird = artifacts.require("./EarlyBird.sol");
 
-contract('Passport', function(accounts) {
-  it("logs when message request events are recieved", function(done) {
-    Passport.deployed().then(function(passport) {
-      console.log('PASSPORT', passport);
-      done();
-    });
+contract('EarlyBird', (accounts) => {
+  it('fails to register sim without correct balance', async () => {
+    const contract = await EarlyBird.deployed();
+
+    console.log('EarlyBird', contract);
+    
+    return Promise.resolve();
   });
 });

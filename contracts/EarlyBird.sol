@@ -7,6 +7,7 @@ contract EarlyBird {
   address public owner;
 
   struct Staker {
+    uint index;
     uint amount;
     uint blockNumber;
   }
@@ -15,26 +16,30 @@ contract EarlyBird {
   address[] public stakersList;
 
   event StakeCompleted(uint blockNumber);
-  event StakeRefunded(address recipient, uint amount);
+  event StakeRefunded(uint amount);
 
   function EarlyBird() {
     owner = msg.sender;
   }
 
-  function getStaker() public returns (bool) {
-    return stakers[msg.sender];
+  function isStaker(address staker) public constant returns (bool) {
+    if (stakersList.length == 0) return false;
+    return stakersList[stakers[staker].index] == staker;
+  }
+
+  function getStaker() public returns (uint amount, uint blockNumber) {
+    return (stakers[msg.sender].amount, stakers[msg.sender].blockNumber);
   }
 
   function stake() payable {
     if (msg.value != cost) throw;
 
-    if (!stakers[msg.sender]) {
+    if (!isStaker(msg.sender)) {
       stakers[msg.sender] = Staker({
+        index: stakersList.push(msg.sender) -1,
         amount: msg.value,
         blockNumber: block.number,
       });
-
-      stakersList.push(msg.sender);
     } else if (stakers[msg.sender].amount == 0) {
       stakers[msg.sender].amount = msg.value;
       stakers[msg.sender].blockNumber = block.number;
@@ -46,7 +51,7 @@ contract EarlyBird {
   }
 
   function refundStake() public {
-    if (!stakers[msg.sender]) throw;
+    if (!isStaker(msg.sender)) throw;
     if (stakers[msg.sender].amount > 0) throw;
 
     uint refund = stakers[msg.sender].amount;
@@ -55,7 +60,7 @@ contract EarlyBird {
     if (!msg.sender.send(refund)) {
       stakers[msg.sender].amount += refund;
     } else {
-      StakeRefunded();
+      StakeRefunded(refund);
     }
   }
 
