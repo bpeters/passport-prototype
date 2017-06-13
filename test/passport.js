@@ -1,10 +1,11 @@
-var Passport = artifacts.require("./Passport.sol");
+const Passport = artifacts.require("./Passport.sol");
 
-contract('Passport', function(accounts) {
-  it("logs when message request events are recieved", function(done) {
-    Passport.deployed().then(function(passport) {
-      console.log('PASSPORT', passport);
-      done();
-    });
+contract('Passport', (accounts) => {
+  it('fails to register sim without correct balance', async () => {
+    const contract = await Passport.deployed();
+
+    console.log('PASSPORT', contract);
+    
+    return Promise.resolve();
   });
 });

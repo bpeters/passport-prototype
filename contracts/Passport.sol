@@ -9,20 +9,20 @@ contract Passport {
 
   mapping (address => uint) private balances;
   mapping (address => string) private sims;
-  mapping (address => int) private usages;
-  mapping (string => address) private addresses; // SIM => address
+  mapping (address => int) private usages;        // Data paid for already
+  mapping (string => address) private addresses;  // SIM => address
 
   event ActivateSIM(string sim);
   event DeactivateSIM(string sim);
   event DepositMade(string sim, uint amount);
   event WithdrawMade(string sim, uint amount);
-  event PayableMade(string sim, uint amount);
+  event CollectionMade(string sim, uint amount);
 
   function Passport() {
     owner = msg.sender;
   }
 
-  function register(string sim) {
+  function register(string sim) payable {
     if (msg.value < minimumBalance) throw;
 
     sims[msg.sender] = sim;
@@ -45,7 +45,7 @@ contract Passport {
     return usages[msg.sender];
   }
 
-  function deposit() public returns (uint) {
+  function deposit() payable returns (uint) {
     uint initialBalance = balances[msg.sender];
     uint newBalance = initialBalance + msg.value;
 
@@ -78,9 +78,11 @@ contract Passport {
 
   function collect(int dataConsumed, string sim) public returns (uint) {
     if (msg.sender != owner) throw;
+    if (balances[user] <= 0) throw;
 
     address user = addresses[sim];
     int usage = usages[user];
+
     uint payableAmount = uint(dataConsumed - usage) * dataCost;
 
     if (balances[user] < payableAmount) {                   // if balance can't cover payable
@@ -95,13 +97,17 @@ contract Passport {
       balances[user] += payableAmount;
       usages[user] = usage;
     } else {
-      PayableMade(sim, payableAmount);
+      CollectionMade(sim, payableAmount);
     }
 
     if (balances[user] < minimumBalance) DeactivateSIM(sim);
 
     return 0;
   }
+
+  // Todo transfer sim to another address
+
+  // Todo manage multiple sim from a single address
 
   function () {
     throw;
