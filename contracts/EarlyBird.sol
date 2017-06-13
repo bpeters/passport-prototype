@@ -1,10 +1,11 @@
-pragma solidity ^0.4.4;
+pragma solidity ^0.4.11;
 
-contract EarlyBird {
+import 'zeppelin-solidity/contracts/ownership/Ownable.sol';
+
+contract EarlyBird is Ownable {
 
   uint constant cost = 10 finney; // Stake Amount .01 ether
 
-  address public owner;
   bool public isLocked;
 
   struct Staker {
@@ -67,7 +68,7 @@ contract EarlyBird {
     }
   }
 
-  function lockEarlyBird() public {
+  function lockEarlyBird() onlyOwner public {
     if (msg.sender != owner) throw;
 
     isLocked = true;
