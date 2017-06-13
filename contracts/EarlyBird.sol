@@ -5,6 +5,7 @@ contract EarlyBird {
   uint constant cost = 10 finney; // Stake Amount .01 ether
 
   address public owner;
+  bool public isLocked;
 
   struct Staker {
     uint index;
@@ -20,6 +21,7 @@ contract EarlyBird {
 
   function EarlyBird() {
     owner = msg.sender;
+    isLocked = false;
   }
 
   function isStaker(address staker) public constant returns (bool) {
@@ -32,6 +34,7 @@ contract EarlyBird {
   }
 
   function stake() payable {
+    if (isLocked) throw;
     if (msg.value != cost) throw;
 
     if (!isStaker(msg.sender)) {
@@ -52,7 +55,7 @@ contract EarlyBird {
 
   function refundStake() public {
     if (!isStaker(msg.sender)) throw;
-    if (stakers[msg.sender].amount > 0) throw;
+    if (stakers[msg.sender].amount == 0) throw;
 
     uint refund = stakers[msg.sender].amount;
     stakers[msg.sender].amount = 0;
@@ -62,6 +65,12 @@ contract EarlyBird {
     } else {
       StakeRefunded(refund);
     }
+  }
+
+  function lockEarlyBird() public {
+    if (msg.sender != owner) throw;
+
+    isLocked = true;
   }
 
   function () {
