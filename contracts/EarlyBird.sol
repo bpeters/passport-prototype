@@ -4,8 +4,7 @@ import 'zeppelin-solidity/contracts/ownership/Ownable.sol';
 
 contract EarlyBird is Ownable {
 
-  uint constant cost = 10 finney; // Stake Amount .01 ether
-
+  uint public constant stakeAmount = 0.001 ether;
   bool public isLocked;
 
   struct Staker {
@@ -17,11 +16,10 @@ contract EarlyBird is Ownable {
   mapping(address => Staker) public stakers;
   address[] public stakersList;
 
-  event StakeCompleted(uint blockNumber);
-  event StakeRefunded(uint amount);
+  event StakeCompleted(address staker, uint blockNumber);
+  event StakeRefunded(address staker);
 
   function EarlyBird() {
-    owner = msg.sender;
     isLocked = false;
   }
 
@@ -30,13 +28,13 @@ contract EarlyBird is Ownable {
     return stakersList[stakers[staker].index] == staker;
   }
 
-  function getStaker() public returns (uint amount, uint blockNumber) {
+  function getStaker() public constant returns (uint amount, uint blockNumber) {
     return (stakers[msg.sender].amount, stakers[msg.sender].blockNumber);
   }
 
-  function stake() payable {
+  function stake() public payable {
     if (isLocked) throw;
-    if (msg.value != cost) throw;
+    if (msg.value != stakeAmount) throw;
 
     if (!isStaker(msg.sender)) {
       stakers[msg.sender] = Staker({
@@ -51,7 +49,7 @@ contract EarlyBird is Ownable {
       throw;
     }
 
-    StakeCompleted(block.number);
+    StakeCompleted(msg.sender, block.number);
   }
 
   function refundStake() public {
@@ -64,13 +62,11 @@ contract EarlyBird is Ownable {
     if (!msg.sender.send(refund)) {
       stakers[msg.sender].amount += refund;
     } else {
-      StakeRefunded(refund);
+      StakeRefunded(msg.sender);
     }
   }
 
-  function lockEarlyBird() onlyOwner public {
-    if (msg.sender != owner) throw;
-
+  function lockEarlyBird() public onlyOwner {
     isLocked = true;
   }
 

@@ -1,11 +1,11 @@
 pragma solidity ^0.4.11;
 
-contract Passport {
+import 'zeppelin-solidity/contracts/ownership/Ownable.sol';
+
+contract Passport is Ownable {
 
   uint constant minimumBalance = 40 finney; // Minimum balance .04 ETH ~$12
   uint constant dataCost = 40000000;  // Cost per data byte in wei
-
-  address public owner;
 
   mapping (address => uint) private balances;
   mapping (address => string) private sims;
@@ -18,9 +18,7 @@ contract Passport {
   event WithdrawMade(string sim, uint amount);
   event CollectionMade(string sim, uint amount);
 
-  function Passport() {
-    owner = msg.sender;
-  }
+  function Passport() {}
 
   function register(string sim) payable {
     if (msg.value < minimumBalance) throw;
@@ -76,8 +74,7 @@ contract Passport {
     return balances[msg.sender];
   }
 
-  function collect(int dataConsumed, string sim) public returns (uint) {
-    if (msg.sender != owner) throw;
+  function collect(int dataConsumed, string sim) onlyOwner public returns (uint) {
     if (balances[user] <= 0) throw;
 
     address user = addresses[sim];
