@@ -10,6 +10,7 @@ contract('EarlyBird', (accounts) => {
 
   before(async () => {
     contract = await EarlyBird.deployed();
+    fixture.balance = contract.contract._eth.getBalance(accounts[0]);
 
     return Promise.resolve();
   });
@@ -45,10 +46,12 @@ contract('EarlyBird', (accounts) => {
 
     fixture.staker.amount = staker[0].toNumber();
     fixture.staker.blockNumber = staker[1].toNumber();
+    fixture.staker.balance = contract.contract._eth.getBalance(accounts[0]);
 
     assert.equal(isStaker, true);
     assert.equal(fixture.staker.amount, fixture.stakeAmount);
     assert.ok(fixture.staker.blockNumber);
+    assert.equal(fixture.staker.balance < fixture.balance, true);
 
     return Promise.resolve();
   });
@@ -66,9 +69,28 @@ contract('EarlyBird', (accounts) => {
     return Promise.resolve();
   });
 
-  // it('refundStake should refund stake amount if staked', async () => {
-  //   await contract.isStaker.call();
+  it('refundStake should fail if never staked', async () => {
+    try {
+      await contract.refundStake.call({
+        from: accounts[1],
+      });
+    } catch (err) {
+      assert.ok(err);
+    }
 
-  //   return Promise.resolve();
-  // });
+    return Promise.resolve();
+  });
+
+  it('refundStake should refund if staked', async () => {
+    await contract.refundStake();
+
+    const staker = await contract.getStaker();
+
+    fixture.staker.amount = staker[0].toNumber();
+
+    assert.equal(fixture.staker.amount, 0);
+    assert.ok(fixture.staker.blockNumber, staker[1].toNumber());
+
+    return Promise.resolve();
+  });
 });
