@@ -4,7 +4,7 @@ import 'zeppelin-solidity/contracts/ownership/Ownable.sol';
 
 contract EarlyBird is Ownable {
 
-  uint public constant stakeAmount = 0.001 ether;
+  uint public stakeAmount;
   bool public isLocked;
 
   struct Staker {
@@ -19,7 +19,8 @@ contract EarlyBird is Ownable {
   event StakeCompleted(address staker, uint blockNumber);
   event StakeRefunded(address staker);
 
-  function EarlyBird() {
+  function EarlyBird(int amount) {
+    stakeAmount = uint(amount);
     isLocked = false;
   }
 

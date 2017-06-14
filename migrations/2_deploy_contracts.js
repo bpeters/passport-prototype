@@ -3,5 +3,5 @@ const EarlyBird = artifacts.require("./EarlyBird.sol");
 
 module.exports = function(deployer) {
   deployer.deploy(Passport);
-  deployer.deploy(EarlyBird);
+  deployer.deploy(EarlyBird, 1000000000000000);
 };

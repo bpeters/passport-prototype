@@ -148,5 +148,40 @@ contract('EarlyBird', (accounts) => {
 
       return Promise.resolve();
     });
+
+    it('should lock contract', async () => {
+      await contract.lockEarlyBird();
+
+      const isLocked = await contract.isLocked();
+
+      assert.equal(isLocked, true);
+
+      return Promise.resolve();
+    });
+
+    it('should not allow new stakers', async () => {
+      try {
+        await contract.stake({
+          from: accounts[1],
+          value: fixture.stakeAmount,
+        });
+      } catch(err) {
+        assert.ok(err);
+      }
+
+      return Promise.resolve();
+    });
+
+    it('should allow refunds', async () => {
+      await contract.refundStake();
+
+      const staker = await contract.getStaker();
+
+      const amount = staker[0].toNumber();
+
+      assert.equal(amount, 0);
+
+      return Promise.resolve();
+    });
   });
 });
