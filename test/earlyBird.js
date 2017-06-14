@@ -2,7 +2,6 @@ const EarlyBird = artifacts.require("./EarlyBird.sol");
 
 const fixture = {
   stakeAmount: 1000000000000000,
-  staker: {},
 };
 
 contract('EarlyBird', (accounts) => {
@@ -15,85 +14,139 @@ contract('EarlyBird', (accounts) => {
     return Promise.resolve();
   });
 
-  it('deployed parameters are correct', async () => {
-    const owner = await contract.owner();
-    const isLocked = await contract.isLocked();
-    const stakeAmount = await contract.stakeAmount();
+  describe('Deploy', () => {
+    it('parameters are correct', async () => {
+      const owner = await contract.owner();
+      const isLocked = await contract.isLocked();
+      const stakeAmount = await contract.stakeAmount();
 
-    assert.equal(owner, accounts[0]);
-    assert.equal(isLocked, false);
-    assert.equal(stakeAmount.toNumber(), fixture.stakeAmount);
+      assert.equal(owner, accounts[0]);
+      assert.equal(isLocked, false);
+      assert.equal(stakeAmount.toNumber(), fixture.stakeAmount);
 
-    return Promise.resolve();
+      return Promise.resolve();
+    });
   });
 
-  it('isStaker should return false if not a staker', async () => {
-    const isStaker = await contract.isStaker(accounts[0]);
+  describe('IsStaker', () => {
+    it('should return false if not a staker', async () => {
+      const isStaker = await contract.isStaker(accounts[0]);
 
-    assert.equal(isStaker, false);
+      assert.equal(isStaker, false);
 
-    return Promise.resolve();
+      return Promise.resolve();
+    });
   });
 
-  it('new stake should create staker', async () => {
-    await contract.stake({
-      from: accounts[0],
-      value: fixture.stakeAmount,
+  describe('Stake', () => {
+    it('should fail if value not equal to stake amount', async () => {
+      try {
+        await contract.stake({
+          from: accounts[0],
+          value: 2000000000000000,
+        });
+      } catch (err) {
+        assert.ok(err);
+      }
+
+      return Promise.resolve();
     });
 
-    const isStaker = await contract.isStaker(accounts[0]);
-    const staker = await contract.getStaker();
-
-    fixture.staker.amount = staker[0].toNumber();
-    fixture.staker.blockNumber = staker[1].toNumber();
-    fixture.staker.balance = contract.contract._eth.getBalance(accounts[0]);
-
-    assert.equal(isStaker, true);
-    assert.equal(fixture.staker.amount, fixture.stakeAmount);
-    assert.ok(fixture.staker.blockNumber);
-    assert.equal(fixture.staker.balance < fixture.balance, true);
-
-    return Promise.resolve();
-  });
-
-  it('stake should fail if already staked', async () => {
-    try {
+    it('should create new staker', async () => {
       await contract.stake({
         from: accounts[0],
         value: fixture.stakeAmount,
       });
-    } catch (err) {
-      assert.ok(err);
-    }
 
-    return Promise.resolve();
+      const isStaker = await contract.isStaker(accounts[0]);
+      const staker = await contract.getStaker();
+
+      const amount = staker[0].toNumber();
+      const blockNumber = staker[1].toNumber();
+      const balance = contract.contract._eth.getBalance(accounts[0]);
+
+      fixture.blockNumber = blockNumber;
+
+      assert.equal(isStaker, true);
+      assert.equal(amount, fixture.stakeAmount);
+      assert.ok(blockNumber);
+      assert.equal(balance < fixture.balance, true);
+
+      return Promise.resolve();
+    });
+
+    it('should fail if already staked', async () => {
+      try {
+        await contract.stake({
+          from: accounts[0],
+          value: fixture.stakeAmount,
+        });
+      } catch (err) {
+        assert.ok(err);
+      }
+
+      return Promise.resolve();
+    });
   });
 
-  it('refundStake should fail if never staked', async () => {
-    try {
-      await contract.refundStake.call({
-        from: accounts[1],
+  describe('RefundStake', () => {
+    it('should fail if never staked', async () => {
+      try {
+        await contract.refundStake.call({
+          from: accounts[1],
+        });
+      } catch (err) {
+        assert.ok(err);
+      }
+
+      return Promise.resolve();
+    });
+
+    it('should refund if staked', async () => {
+      await contract.refundStake();
+
+      const staker = await contract.getStaker();
+
+      const amount = staker[0].toNumber();
+      const blockNumber = staker[1].toNumber();
+
+      assert.equal(amount, 0);
+      assert.ok(fixture.blockNumber, blockNumber);
+
+      return Promise.resolve();
+    });
+
+    it('can stake again after with higher blocknumber', async () => {
+      await contract.stake({
+        from: accounts[0],
+        value: fixture.stakeAmount,
       });
-    } catch (err) {
-      assert.ok(err);
-    }
 
-    return Promise.resolve();
+      const isStaker = await contract.isStaker(accounts[0]);
+      const staker = await contract.getStaker();
+
+      const amount = staker[0].toNumber();
+      const blockNumber = staker[1].toNumber();
+
+      assert.equal(isStaker, true);
+      assert.equal(amount, fixture.stakeAmount);
+      assert.equal(fixture.blockNumber < blockNumber, true);
+
+      return Promise.resolve();
+    });
   });
 
-  it('refundStake should refund if staked', async () => {
-    await contract.refundStake();
+  describe('LockEarlyBird', () => {
+    it('should not lock if not owner', async () => {
+      try {
+        await contract.lockEarlyBird.call({
+          from: accounts[1],
+        });
+      } catch(err) {
+        assert.ok(err);
+      }
 
-    const staker = await contract.getStaker();
-    const refundBalance = contract.contract._eth.getBalance(accounts[0]);
-
-    console.log(fixture.staker.balance - refundBalance);
-
-    fixture.staker.amount = staker[0].toNumber();
-
-    assert.equal(fixture.staker.amount, 0);
-    assert.ok(fixture.staker.blockNumber, staker[1].toNumber());
-
-    return Promise.resolve();
+      return Promise.resolve();
+    });
   });
 });
