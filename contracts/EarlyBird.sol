@@ -73,4 +73,5 @@ contract EarlyBird is Ownable {
   function () {
     throw;
   }
+
 }

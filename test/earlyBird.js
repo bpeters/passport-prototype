@@ -85,6 +85,9 @@ contract('EarlyBird', (accounts) => {
     await contract.refundStake();
 
     const staker = await contract.getStaker();
+    const refundBalance = contract.contract._eth.getBalance(accounts[0]);
+
+    console.log(fixture.staker.balance - refundBalance);
 
     fixture.staker.amount = staker[0].toNumber();
 
